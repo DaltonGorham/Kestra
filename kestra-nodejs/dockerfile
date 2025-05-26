@@ -1,0 +1,22 @@
+FROM kestra/kestra:latest
+
+# Switch to root to install packages
+USER root
+
+# Install required packages and Node.js
+RUN apt-get update && \
+    apt-get install -y curl xz-utils && \
+    curl -fsSL https://nodejs.org/dist/v20.19.2/node-v20.19.2-linux-x64.tar.xz -o node.tar.xz && \
+    tar -xf node.tar.xz && \
+    mv node-v20.19.2-linux-x64 /opt/nodejs && \
+    ln -s /opt/nodejs/bin/node /usr/local/bin/node && \
+    ln -s /opt/nodejs/bin/npm /usr/local/bin/npm && \
+    rm node.tar.xz && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Verify installation
+RUN node --version && npm --version
+
+# Switch back to kestra user
+USER kestra

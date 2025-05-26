@@ -1,0 +1,61 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_DB: kestra
+      POSTGRES_USER: kestra
+      POSTGRES_PASSWORD: k3str4
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
+  kestra:
+    build: .  # This will build from your Dockerfile
+    pull_policy: build
+    command: server standalone
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      KESTRA_CONFIGURATION: |
+        datasources:
+          postgres:
+            url: jdbc:postgresql://postgres:5432/kestra
+            driverClassName: org.postgresql.Driver
+            username: kestra
+            password: k3str4
+        kestra:
+          server:
+            basic-auth:
+              enabled: false
+          repository:
+            type: postgres
+          storage:
+            type: local
+            local:
+              base-path: "/app/storage"
+          queue:
+            type: postgres
+          tasks:
+            tmp-dir:
+              path: /tmp/kestra-wd/tmp
+          url: http://localhost:8080/
+        SECRET_KEY: "NzI4ODkwODUwY2FlOWUxYjZmNTZiOThlNmFkMWYwOGI3NTU2OWI1OXY2MXBHM3NwUlpzZndEWGhGTXdsNmw2UEk="
+    volumes:
+      - ./kestra-storage:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./kestra-wd:/tmp/kestra-wd  # 👈 Using local directory for Kestra temp files
+
+volumes:
+  postgres-data:
+    driver: local
+  kestra-data:
+    driver: local
